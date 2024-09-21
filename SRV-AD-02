@@ -5,15 +5,19 @@ $VHDPath = "D:\EDU-POPOVICI\VMS\$VMName\$VMName.vhdx"
 $VHDSize = 127GB
 $VMPath = "D:\EDU-POPOVICI\VMS\"
 $ProcessorCount = 4
-$DVDPath = "D:\EDU-POPOVICI\VMS\$VMName\DVD.iso"  # Caminho para a imagem ISO do CD/DVD
 
-# Criando o diretório para o disco virtual, se não existir
+# Criando o diretório para a VM, se não existir
 if (-not (Test-Path -Path "D:\EDU-POPOVICI\VMS\$VMName")) {
     New-Item -ItemType Directory -Path "D:\EDU-POPOVICI\VMS\$VMName"
 }
 
-# Criando a máquina virtual com memória dinâmica desabilitada
-New-VM -Name $VMName -MemoryStartupBytes $MemoryStartupBytes -Path $VMPath -Generation 2 -BootDevice VHD
+# Criando a máquina virtual
+try {
+    New-VM -Name $VMName -MemoryStartupBytes $MemoryStartupBytes -Path $VMPath -Generation 2
+} catch {
+    Write-Host "Erro ao criar a máquina virtual: $_"
+    exit
+}
 
 # Adicionando o número de processadores
 Set-VMProcessor -VMName $VMName -Count $ProcessorCount
@@ -28,7 +32,10 @@ Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
 Add-VMNetworkAdapter -VMName $VMName -SwitchName "None"
 
 # Adicionando a unidade de disco (CD/DVD)
-Add-VMDvdDrive -VMName $VMName -Path $DVDPath
+Add-VMDvdDrive -VMName $VMName
+
+# Configurando a ordem de inicialização para usar o CD/DVD
+Set-VMFirmware -VMName $VMName -FirstBootDevice (Get-VMDvdDrive -VMName $VMName)
 
 # Configuração final
 Write-Host "Máquina virtual $VMName criada com sucesso com 2GB de RAM, 4 núcleos de processamento, disco de 127GB dinâmico, unidade de disco CD/DVD e interface de rede desconectada."
