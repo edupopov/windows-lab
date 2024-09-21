@@ -1,0 +1,34 @@
+# Definindo os parâmetros
+$VMName = "SRV-GER-01"
+$MemoryStartupBytes = 2GB
+$VHDPath = "D:\EDU-POPOVICI\VMS\$VMName\$VMName.vhdx"
+$VHDSize = 127GB
+$VMPath = "D:\EDU-POPOVICI\VMS\"
+$ProcessorCount = 4
+$DVDPath = "D:\EDU-POPOVICI\VMS\$VMName\DVD.iso"  # Caminho para a imagem ISO do CD/DVD
+
+# Criando o diretório para o disco virtual, se não existir
+if (-not (Test-Path -Path "D:\EDU-POPOVICI\VMS\$VMName")) {
+    New-Item -ItemType Directory -Path "D:\EDU-POPOVICI\VMS\$VMName"
+}
+
+# Criando a máquina virtual com memória dinâmica desabilitada
+New-VM -Name $VMName -MemoryStartupBytes $MemoryStartupBytes -Path $VMPath -Generation 2 -BootDevice VHD
+
+# Adicionando o número de processadores
+Set-VMProcessor -VMName $VMName -Count $ProcessorCount
+
+# Criando o disco virtual dinâmico
+New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
+
+# Adicionando o disco virtual à VM
+Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+
+# Adicionando a interface de rede desconectada
+Add-VMNetworkAdapter -VMName $VMName -SwitchName "None"
+
+# Adicionando a unidade de disco (CD/DVD)
+Add-VMDvdDrive -VMName $VMName -Path $DVDPath
+
+# Configuração final
+Write-Host "Máquina virtual $VMName criada com sucesso com 2GB de RAM, 4 núcleos de processamento, disco de 127GB dinâmico, unidade de disco CD/DVD e interface de rede desconectada."
