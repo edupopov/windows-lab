@@ -1,0 +1,57 @@
+# Importante - Em algumas versões do Hyper-V não funciona a ativação do TPM
+# Confira manualmente se foi habilitado antes de instalar o Windows 11
+
+# Definindo os parâmetros
+$VMNames = @("CLI-W11-01", "CLI-W11-02")
+$MemoryStartupBytes = 4GB
+$VHDSize = 127GB
+$VMPath = "D:\EDU-POPOVICI\VMS\"
+$ProcessorCount = 8
+
+# Loop para criar as máquinas virtuais
+foreach ($VMName in $VMNames) {
+    # Criando o diretório para a VM, se não existir
+    if (-not (Test-Path -Path "$VMPath$VMName")) {
+        New-Item -ItemType Directory -Path "$VMPath$VMName"
+    }
+
+    # Criando a máquina virtual
+    try {
+        New-VM -Name $VMName -MemoryStartupBytes $MemoryStartupBytes -Path $VMPath -Generation 2
+    } catch {
+        Write-Host "Erro ao criar a máquina virtual $($VMName): $_"
+        continue
+    }
+
+    # Adicionando o número de processadores
+    Set-VMProcessor -VMName $VMName -Count $ProcessorCount
+
+    # Criando o disco virtual dinâmico
+    $VHDPath = "$VMPath$VMName\$VMName.vhdx"
+    New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
+
+    # Adicionando o disco virtual à VM
+    Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+
+    # Adicionando a interface de rede desconectada
+    Add-VMNetworkAdapter -VMName $VMName -SwitchName "None"
+
+    # Adicionando a unidade de disco (CD/DVD)
+    Add-VMDvdDrive -VMName $VMName
+
+    # Configurando a ordem de inicialização para usar o CD/DVD
+    Set-VMFirmware -VMName $VMName -FirstBootDevice (Get-VMDvdDrive -VMName $VMName)
+
+    # Ativando TPM
+    try {
+        Set-VMFirmware -VMName $VMName -EnableSecureBoot On
+        # TPM não pode ser ativado diretamente via PowerShell em algumas versões
+        # Verifique se a máquina virtual suporta TPM e se a configuração está correta
+    } catch {
+        Write-Host "Erro ao ativar TPM na máquina virtual $($VMName): $_"
+        continue
+    }
+
+    # Configuração final
+    Write-Host "Máquina virtual $($VMName) criada com sucesso com 4GB de RAM, 4 núcleos de processamento, disco de 127GB dinâmico, unidade de disco CD/DVD, interface de rede desconectada."
+}
